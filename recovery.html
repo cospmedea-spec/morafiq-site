@@ -1,0 +1,28 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مرافق | استعادة كلمة المرور</title><style>body{margin:0;background:#edf4fb;font-family:Tahoma,Arial,sans-serif;color:#17324f;min-height:100vh;display:grid;place-items:center}.card{background:#fff;width:min(480px,calc(100% - 30px));padding:28px;border-radius:18px;box-shadow:0 10px 35px #16375a22;box-sizing:border-box}h1{font-size:23px;color:#123e70}label{display:block;margin:16px 0 6px;font-weight:bold}input,button{font:inherit;width:100%;box-sizing:border-box;padding:12px;border-radius:9px;border:1px solid #b7c9d9}button{background:#176eaa;color:#fff;border:0;margin-top:16px;cursor:pointer}button:disabled{opacity:.55}a{color:#176eaa}#status{line-height:1.7;white-space:pre-wrap}small{color:#526a80}.hidden{display:none}</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body><main class="card"><h1>🔐 استعادة كلمة المرور — مرافق</h1><p id="intro">لأمان حسابك، اضغط زر التحقق من الرابط أولًا، ثم أدخل كلمة المرور الجديدة.</p><button id="verify">التحقق من رابط الاستعادة</button><form id="form" class="hidden"><label for="password">كلمة المرور الجديدة (12 حرفًا على الأقل)</label><input id="password" type="password" minlength="12" autocomplete="new-password" required><label for="confirm">تأكيد كلمة المرور الجديدة</label><input id="confirm" type="password" minlength="12" autocomplete="new-password" required><button id="save" type="submit">حفظ كلمة المرور الجديدة</button></form><p id="status" role="status" aria-live="polite"></p><p><small>إذا انتهت صلاحية الرابط، ارجع إلى المنصة واطلب رسالة جديدة.</small></p><a href="./app.html">العودة إلى منصة مرافق</a></main><script>
+(()=>{'use strict';
+const URL='https://xsewchrpggsjcmndvtdu.supabase.co';
+const KEY='sb_publishable_PzEQBIRRELbpxOggdln1pQ_EV4rCEno';
+const client=window.supabase.createClient(URL,KEY,{auth:{detectSessionInUrl:false,persistSession:false,autoRefreshToken:false}});
+const $=id=>document.getElementById(id), qs=new URLSearchParams(location.search);
+const hash=qs.get('token_hash');let verified=false;
+function notice(s,bad=false){$('status').textContent=s;$('status').style.color=bad?'#b42318':'#08744b'}
+if(!hash || qs.get('type')!=='recovery'){$('verify').disabled=true;notice('الرابط غير مكتمل. اطلب رابط استعادة جديدًا من صفحة تسجيل الدخول.',true)}
+$('verify').addEventListener('click',async()=>{
+ if(!hash)return;
+ $('verify').disabled=true;notice('جارٍ التحقق من الرابط...');
+ try{const {data,error}=await client.auth.verifyOtp({token_hash:hash,type:'recovery'});if(error)throw error;
+ if(!data?.session)throw Error('لم يتم إنشاء جلسة استعادة صالحة');
+ verified=true;history.replaceState(null,'',location.pathname);$('verify').classList.add('hidden');$('form').classList.remove('hidden');notice('تم التحقق. أدخل كلمة المرور الجديدة.');$('password').focus();
+ }catch(e){notice('تعذر التحقق من الرابط: '+e.message+' — اطلب رسالة استعادة جديدة.',true);$('verify').disabled=false}
+});
+$('form').addEventListener('submit',async e=>{e.preventDefault();if(!verified)return notice('يجب التحقق من رابط الاستعادة أولًا.',true);
+ const p=$('password').value,c=$('confirm').value;
+ if(p.length<12)return notice('كلمة المرور يجب أن تتكون من 12 حرفًا على الأقل.',true);
+ if(p!==c)return notice('كلمتا المرور غير متطابقتين.',true);
+ $('save').disabled=true;notice('جارٍ حفظ كلمة المرور...');
+ try{const {error}=await client.auth.updateUser({password:p});if(error)throw error;
+ $('form').classList.add('hidden');$('password').value=$('confirm').value='';verified=false;await client.auth.signOut();notice('تم تغيير كلمة المرور بنجاح. يمكنك الآن العودة إلى منصة مرافق وتسجيل الدخول.');
+ }catch(e){notice('تعذر حفظ كلمة المرور: '+e.message,true);$('save').disabled=false}
+});
+})();
+</script></body></html>
