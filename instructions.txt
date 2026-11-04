@@ -1,0 +1,20 @@
+الموضوع: استعادة كلمة المرور - منصة مرافق
+
+الصق التالي في Body بصيغة HTML في Supabase > Authentication > Emails > Reset Password:
+
+<div dir="rtl" style="font-family:Arial,sans-serif;text-align:right">
+<h2>استعادة كلمة المرور - منصة مرافق</h2>
+<p>لقد تلقينا طلبًا لإعادة تعيين كلمة المرور لحسابك.</p>
+<p><a href="https://cospmedea-spec.github.io/morafiq-site/recovery.html?token_hash={{ .TokenHash }}&amp;type=recovery">اضغط هنا لتعيين كلمة مرور جديدة</a></p>
+<p>بعد فتح الصفحة، اضغط على «التحقق من رابط الاستعادة»، ثم أدخل كلمة المرور الجديدة.</p>
+<p>إذا لم تطلب ذلك، تجاهل الرسالة.</p>
+</div>
+
+مهم: لا تستخدم {{ .ConfirmationURL }} في هذا القالب. هذا الرابط يستخدم token_hash للتحقق فقط عند ضغط المستشار على زر التحقق، مما يقلل خطر استهلاك الرمز بفحص روابط البريد تلقائيًا.
+
+طريقة الرفع:
+1. ارفع app.html و recovery.html في جذر مستودع morafiq-site.
+2. في Supabase > Authentication > URL Configuration أضف https://cospmedea-spec.github.io/morafiq-site/recovery.html إلى Redirect URLs، واضبط Site URL على رابط app.html.
+3. احفظ قالب Reset Password أعلاه.
+4. انتظر نشر GitHub Pages واطلب رابطًا جديدًا. لا تستخدم الروابط القديمة.
+5. إن لم تصل الرسالة الثانية، راجع Auth Logs و Brevo Transactional Logs وحدود Rate Limits؛ هذا مستقل عن صفحة الاستعادة.
