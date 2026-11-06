@@ -1901,6 +1901,70 @@ mf5launch.onclick=()=>{if(!current){alert('سجّل الدخول أولًا.');r
 mf5E('mf5-close').onclick=()=>mf5overlay.classList.remove('active');
 mf5E('mf5-tabs').onclick=e=>{const b=e.target.closest('[data-mf5-tab]');if(b){mf5tab=b.dataset.mf5Tab;mf5show()}};
 
+
+/* MoraFiq 5.2 — unified, isolated, official center printing */
+const mf52style=document.createElement('style');
+mf52style.id='mf52-official-print-css';
+mf52style.textContent=`
+@page{size:A4 portrait;margin:15mm 12mm}
+@media print{
+ html,body{background:#fff!important;margin:0!important;padding:0!important}
+ body.mf34-print>*:not(#mf34-print-sheet){display:none!important;visibility:hidden!important}
+ body.mf34-print #mf34-print-sheet{display:block!important;visibility:visible!important;position:static!important;width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;direction:rtl!important;color:#111!important;background:white!important;font:11pt Tahoma,Arial,sans-serif!important;box-shadow:none!important}
+ body.mf34-print #mf34-print-sheet *{visibility:visible!important}
+ body.mf34-print #mf34-print-sheet .mf-official-header{display:block!important;margin:0 0 12mm!important}
+ body.mf34-print #mf34-print-sheet .mf-republic{display:block!important;text-align:center!important;line-height:1.6!important;font-size:12pt!important;font-weight:bold!important;border-bottom:2px solid #111!important;padding-bottom:7px!important}
+ body.mf34-print #mf34-print-sheet .mf-org{display:grid!important;grid-template-columns:1fr 1fr!important;gap:3px 14px!important;margin:9px 0!important;border-bottom:1px solid #888!important;padding-bottom:8px!important;font-size:10pt!important}
+ body.mf34-print #mf34-print-sheet .mf-official-title{display:block!important;text-align:center!important;border:1.5px solid #111!important;border-radius:0!important;margin:12px 0!important;padding:8px!important;font-size:15pt!important;color:#111!important;background:white!important}
+ body.mf34-print #mf34-print-sheet .mf-official-body{display:block!important;line-height:1.65!important}
+ body.mf34-print #mf34-print-sheet table{width:100%!important;border-collapse:collapse!important;table-layout:auto!important;break-inside:auto!important}
+ body.mf34-print #mf34-print-sheet th,body.mf34-print #mf34-print-sheet td{border:1px solid #444!important;padding:5px 6px!important;font-size:9pt!important;color:#111!important;background:white!important;overflow-wrap:anywhere!important}
+ body.mf34-print #mf34-print-sheet th{background:#eee!important;font-weight:bold!important}
+ body.mf34-print #mf34-print-sheet thead{display:table-header-group!important}
+ body.mf34-print #mf34-print-sheet tr{break-inside:avoid!important}
+ body.mf34-print #mf34-print-sheet .mf-official-footer{display:flex!important;justify-content:space-between!important;margin-top:18mm!important;break-inside:avoid!important;border-top:1px solid #888;padding-top:8px;font-size:10pt!important}
+ body.mf34-print #mf34-print-sheet button,body.mf34-print #mf34-print-sheet input,body.mf34-print #mf34-print-sheet select,body.mf34-print #mf34-print-sheet .noprint{display:none!important}
+}
+#mf52-print-note{font-size:12px;color:#475569}
+`;
+document.head.appendChild(mf52style);
+function mf52Print(title,content,opts={}){
+ if(!current||!['center','admin'].includes(current.role)){alert('هذه الطباعة مخصصة لإدارة المركز');return}
+ const clean=mfSafe;
+ const stored=localStorage.getItem(mfPrefsKey('header'))||'';
+ const extra=stored.replace(/\\n/g,'\n').split('\n').map(x=>x.trim()).filter(Boolean).filter(x=>!x.includes('الجمهورية الجزائرية')&&!x.includes('وزارة التربية الوطنية'));
+ const header=['الجمهورية الجزائرية الديمقراطية الشعبية','وزارة التربية الوطنية',...extra];
+ const center=current.role==='center'?(current.display_name||'غير محدد'):(opts.center||'الإدارة الرئيسية');
+ const manager=localStorage.getItem(mfPrefsKey('manager'))||'غير محدد';
+ const phone=localStorage.getItem(mfPrefsKey('phone'))||'غير محدد';
+ const rawDistrict=opts.district||document.getElementById('mas-district')?.value||document.getElementById('p2-district')?.value||'جميع المقاطعات';
+ const district=rawDistrict==='all'?'جميع المقاطعات':rawDistrict;
+ const sheet=el('mf34-print-sheet');
+ sheet.innerHTML=`<div class="mf-official-header"><div class="mf-republic">${header.map(x=>'<div>'+clean(x)+'</div>').join('')}</div><div class="mf-org"><div><b>مركز التوجيه المدرسي والمهني:</b> ${clean(center)}</div><div><b>المقاطعة:</b> ${clean(district)}</div><div><b>مدير المركز:</b> ${clean(manager)}</div><div><b>هاتف المركز:</b> ${clean(phone)}</div></div><h1 class="mf-official-title">${clean(title)}</h1></div><main class="mf-official-body">${content}</main><footer class="mf-official-footer"><span>حرر بتاريخ: ${clean(new Date().toLocaleDateString('ar-DZ'))}</span><span>مدير المركز: الإمضاء والختم</span></footer>`;
+ sheet.setAttribute('aria-hidden','false');
+ document.body.classList.add('mf34-print');
+ try{window.print()}finally{setTimeout(()=>{document.body.classList.remove('mf34-print');sheet.setAttribute('aria-hidden','true')},1200)}
+}
+mfPrintDocument=mf52Print;
+// Correct the center statistics print, previously missing the official header.
+el('mf-pro-print').onclick=()=>{
+ const active=mfCounselors.filter(p=>p.status==='approved');
+ const rows=active.map(p=>[p.display_name,p.district||'—',mfWorks.filter(w=>w.counselor_id===p.id).length]);
+ const body='<p><b>عدد المستشارين المعتمدين:</b> '+active.length+' — <b>عدد الأعمال المستلمة:</b> '+mfWorks.length+'</p>'+mf52Table(['المستشار','المقاطعة','عدد الأعمال'],rows);
+ mf52Print('التقرير الإحصائي لمركز التوجيه',body);
+};
+function mf52Table(headers,rows){return '<table><thead><tr>'+headers.map(x=>'<th>'+mfSafe(String(x))+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.map(r=>'<tr>'+r.map(c=>'<td>'+mfSafe(String(c??'—'))+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="'+headers.length+'">لا توجد بيانات للفترة المحددة</td></tr>')+'</tbody></table>'}
+// The administrative directory and individual counselor profile now use the same print header.
+phasePrint=function(profile){
+ const rows=profile?phasePeople.filter(p=>p.id===phaseSelected):phaseFiltered();
+ const data=rows.map(p=>[p.display_name,p.district||'—',phaseMeta[p.id]?.institution||'—',phaseMeta[p.id]?.grade||'—',phaseLabel(p.status)]);
+ const title=profile?'الملف الإداري للمستشار':'الدليل الإداري لمستشاري المركز';
+ const body=mf52Table(['المستشار','المقاطعة','المؤسسة','الرتبة','الحالة'],data);
+ mf52Print(title,body,{district:profile?rows[0]?.district||'غير محددة':el('ph1-district')?.value||'جميع المقاطعات'});
+};
+// A single reusable print function is used by approvals, decision history and analytical summaries.
+window.addEventListener('afterprint',()=>{document.body.classList.remove('mf34-print');el('mf34-print-sheet').setAttribute('aria-hidden','true')});
+
 start();
 })();
 </script>
