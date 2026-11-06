@@ -1329,7 +1329,7 @@ async function checkAccess(){
      waiting(p.status==='rejected'?'تم رفض طلب الحساب. راجع الجهة المسؤولة.':p.role==='center'?'حساب المركز ينتظر موافقة المدير الرئيسي.':'حساب المستشار(ة) ينتظر موافقة مركز التوجيه التابع له.');return;
    }
    if(selectedRole && selectedRole!==p.role){applyRoleView(null);waiting('هذا الحساب مسجل بصفة مختلفة عن الخانة المختارة. اختر الصفة الصحيحة ثم أعد الدخول.');return}
-   if(p.role==='counselor'){applyRoleView(null);unlock();updateCounselorLinkCard()}
+   if(p.role==='counselor'){applyRoleView(null);unlock();updateCounselorLinkCard();mf53open.hidden=false}
    else if(p.role==='center'||p.role==='admin'){applyRoleView(p);await loadPanel()}
    else {applyRoleView(null);waiting('نوع الحساب غير معروف: '+p.role)}
  }catch(e){current=null;applyRoleView(null);waiting('خطأ في التحقق من الصلاحيات: '+errorText(e))}
@@ -1968,7 +1968,7 @@ window.addEventListener('afterprint',()=>{document.body.classList.remove('mf34-p
 
 /* مرافق 5.3 — معلوماتي المهنية (حساب المستشار فقط) */
 const mf53style=document.createElement('style');
-mf53style.textContent=`#mf53-open{position:fixed;right:14px;bottom:18px;z-index:99998;background:linear-gradient(125deg,#047ea2,#6d28d9);color:#fff;border:0;border-radius:15px;padding:12px 18px;font:800 15px Tajawal,Arial;box-shadow:0 8px 25px #1254;cursor:pointer}#mf53-modal{display:none;position:fixed;inset:0;z-index:130000;background:#102a42b9;overflow:auto;padding:15px;direction:rtl}#mf53-modal.active{display:block}#mf53-modal .mf53-card{max-width:850px;margin:3vh auto;background:linear-gradient(135deg,#f5fbff,#f1efff);border-radius:24px;padding:25px;color:#16445b;box-shadow:0 15px 50px #0004;font-family:Tajawal,Cairo,Arial}#mf53-modal .mf53-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}#mf53-modal label{font-weight:800;font-size:14px}#mf53-modal input{display:block;width:100%;box-sizing:border-box;margin-top:5px;border:1px solid #a4cbdf;border-radius:11px;padding:11px;font:inherit;background:#fff;color:#16445b}#mf53-modal button{border:0;border-radius:11px;padding:11px 17px;background:#087ca4;color:#fff;font:800 14px Tajawal,Arial;cursor:pointer;margin:6px}#mf53-modal .mf53-muted{color:#64748b;font-size:13px}#mf53-modal .mf53-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}#mf53-modal .mf53-status{white-space:pre-wrap;font-weight:700}html.mf-auth-locked #mf53-open,html.mf-role-center #mf53-open,html.mf-role-admin #mf53-open{display:none!important}@media print{#mf53-open,#mf53-modal{display:none!important}}`;
+mf53style.textContent=`#mf53-open{position:fixed;right:18px;top:16px;bottom:auto;z-index:99998;background:linear-gradient(125deg,#047ea2,#6d28d9);color:#fff;border:0;border-radius:15px;padding:12px 18px;font:800 15px Tajawal,Arial;box-shadow:0 8px 25px #1254;cursor:pointer}#mf53-modal{display:none;position:fixed;inset:0;z-index:130000;background:#102a42b9;overflow:auto;padding:15px;direction:rtl}#mf53-modal.active{display:block}#mf53-modal .mf53-card{max-width:850px;margin:3vh auto;background:linear-gradient(135deg,#f5fbff,#f1efff);border-radius:24px;padding:25px;color:#16445b;box-shadow:0 15px 50px #0004;font-family:Tajawal,Cairo,Arial}#mf53-modal .mf53-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}#mf53-modal label{font-weight:800;font-size:14px}#mf53-modal input{display:block;width:100%;box-sizing:border-box;margin-top:5px;border:1px solid #a4cbdf;border-radius:11px;padding:11px;font:inherit;background:#fff;color:#16445b}#mf53-modal button{border:0;border-radius:11px;padding:11px 17px;background:#087ca4;color:#fff;font:800 14px Tajawal,Arial;cursor:pointer;margin:6px}#mf53-modal .mf53-muted{color:#64748b;font-size:13px}#mf53-modal .mf53-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}#mf53-modal .mf53-status{white-space:pre-wrap;font-weight:700}html.mf-auth-locked #mf53-open,html.mf-role-center #mf53-open,html.mf-role-admin #mf53-open{display:none!important}@media print{#mf53-open,#mf53-modal{display:none!important}}`;
 document.head.appendChild(mf53style);
 const mf53open=document.createElement('button');mf53open.id='mf53-open';mf53open.type='button';mf53open.textContent='👤 معلوماتي المهنية';mf53open.hidden=true;document.body.appendChild(mf53open);
 const mf53modal=document.createElement('div');mf53modal.id='mf53-modal';document.body.appendChild(mf53modal);
@@ -2024,7 +2024,7 @@ el('mf53-print').onclick=()=>{
  mfPrintDocument('البطاقة المهنية لمستشار التوجيه',table);
 };
 const mf53originalRoleView=applyRoleView;
-applyRoleView=function(profile){mf53originalRoleView(profile);mf53open.hidden=profile?.role!=='counselor';if(profile?.role!=='counselor')mf53modal.classList.remove('active')};
+applyRoleView=function(profile){mf53originalRoleView(profile);mf53open.hidden=!(profile?.role==='counselor'||(!profile&&current?.role==='counselor'&&!document.documentElement.classList.contains('mf-auth-locked')));if(profile?.role!=='counselor')mf53modal.classList.remove('active')};
 
 start();
 })();
