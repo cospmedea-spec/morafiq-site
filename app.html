@@ -771,7 +771,27 @@ function fillSet(){$('set-w').value=db.settings.wilaya||'';$('set-s').value=db.s
 function word(){const R=window._rows||[],w=esc(db.settings.wilaya)||'..............',sc=esc(db.settings.school)||'..............................';
  const tr=R.map((i,n)=>`<tr><td>${R.length-n}</td><td>${i.date}</td><td>${NS(i).map(p=>esc(p.name)).join('<br>')}</td><td>${esc(i.lvl)}</td><td>${esc(i.grp)}</td><td>${esc(i.sender)}</td><td>${esc(i.why).replace(/\n/g,'<br>')}</td><td>${esc(i.act).replace(/\n/g,'<br>')}</td></tr>`).join('');
  const W=[5,10,13,7,5,9,25,26],h=['الرقم','التاريخ','اسم ولقب التلميذ','المستوى','الفوج','الجهة المرسلة','حيثيات المقابلة','الإجراءات المتخذة'].map((x,k)=>`<th width="${W[k]}%">${x}</th>`).join('');
- const doc=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Bidi/></w:WordDocument></xml><![endif]--><style>@page Section1{size:841.9pt 595.3pt;mso-page-orientation:landscape;margin:1.5cm}div.Section1{page:Section1}body{font-family:'Traditional Arabic',Arial;font-size:13pt}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #000;padding:4px;text-align:right;vertical-align:top;word-wrap:break-word}th{text-align:center}th{background:#0b4f7a;color:#ffffff;font-weight:bold;font-size:12pt}</style></head><body dir="rtl"><div class="Section1"><p align="center" style="font-weight:bold;font-size:17pt;color:#0b4f7a;font-family:Amiri,Traditional Arabic">الجمهورية الجزائرية الديمقراطية الشعبية<br><span style="font-size:15pt">وزارة التربية الوطنية</span></p><table dir="rtl" style="width:100%;border:none"><tr><td style="border:none;font-weight:bold">مديرية التربية لولاية ${w}</td><td align="left" style="border:none;font-weight:bold;text-align:left">السنة الدراسية ${yr()}</td></tr></table><p align="right" style="font-weight:bold;margin:0;text-align:right">مركز التوجيه المدرسي والمهني – مقاطعة المدية<br>اسم ولقب مستشار التوجيه: ${esc(db.settings.counselor)||'..............................'}<br>المؤسسة: ${sc}</p><p align="center"><span style="font-size:24pt;font-weight:bold;color:#ffffff;background:#1e40af;mso-shading:#1e40af">&nbsp;&nbsp;&nbsp;&nbsp;المقابلات الإرشادية&nbsp;&nbsp;&nbsp;&nbsp;</span></p><table dir="rtl"><tr>${h}</tr>${tr}</table></div></body></html>`;
+ const doc=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Bidi/></w:WordDocument></xml><![endif]--><style>@page Section1{size:841.9pt 595.3pt;mso-page-orientation:landscape;margin:1.5cm}div.Section1{page:Section1}body{font-family:'Traditional Arabic',Arial;font-size:13pt}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #000;padding:4px;text-align:right;vertical-align:top;word-wrap:break-word}th{text-align:center}th{background:#0b4f7a;color:#ffffff;font-weight:bold;font-size:12pt}</style></head><body dir="rtl"><div class="Section1"><p align="center" style="font-weight:bold;font-size:17pt;color:#0b4f7a;font-family:Amiri,Traditional Arabic">الجمهورية الجزائرية الديمقراطية الشعبية<br><span style="font-size:15pt">وزارة التربية الوطنية</span></p><table dir="rtl" style="width:100%;border:none"><tr><td style="border:none;font-weight:bold">مديرية التربية لولاية ${w}</td><td align="left" style="border:none;font-weight:bold;text-align:left">السنة الدراسية ${yr()}</td></tr></table><p align="right" style="font-weight:bold;margin:0;text-align:right">مركز التوجيه المدرسي والمهني – مقاطعة المدية<br>اسم ولقب مستشار التوجيه: ${esc(db.settings.counselor)||'..............................'}<br>المؤسسة: ${sc}</p><p align="center"><span style="font-size:24pt;font-weight:bold;color:#ffffff;background:#1e40af;mso-shading:#1e40af">&nbsp;&nbsp;&nbsp;&nbsp;المقابلات الإرشادية&nbsp;&nbsp;&nbsp;&nbsp;</span></p><table dir="rtl"><tr>${h}</tr>${tr}</table></div>
+<!-- مسار 6.6: إخفاء فضاء العمل المهني من حساب المستشار دون حذف البيانات المخزنة -->
+<style>
+[data-mftab="work"], .mf-newhome .mf-tile[data-tab="work"] {display:none!important}
+#p-work {display:none!important}
+</style>
+<script>
+(function(){
+ 'use strict';
+ function removeWorkspaceLinks(){
+  document.querySelectorAll('[data-mftab="work"], [data-tab="work"], [onclick*="showTab(\'work\')"], [onclick*="showTab(&quot;work&quot;)"]').forEach(node=>node.remove());
+  document.querySelectorAll('.home .hc, .mf-newhome button, .mf-newhome .mf-tile').forEach(node=>{
+   if(node.textContent.includes('فضاء العمل المهني'))node.remove();
+  });
+  const work=document.getElementById('p-work');if(work)work.classList.add('hide');
+  if(typeof tab!=='undefined'&&tab==='work'&&typeof showTab==='function')showTab('home');
+ }
+ removeWorkspaceLinks();
+})();
+</script>
+</body></html>`;
  dl(new Blob(['\ufeff'+doc],{type:'application/msword'}),`المقابلات_الإرشادية_${today()}.doc`)}
 /* ===================== تحليل النتائج ===================== */
 const RES_ORD=['الأولى','أولى','الثانية','ثانية','الثالثة','ثالثة','الرابعة','رابعة'];
@@ -1052,7 +1072,27 @@ table{border-collapse:collapse;width:100%;direction:rtl}td,th{border:1px solid #
 .rp-ttlw{text-align:center}.rp-ttl{font-size:18pt;font-weight:bold;color:${bw?'#000':'#fff'};background:${bw?'#fff':A};border:2px solid ${A};padding:4px 30px;text-align:center}
 .rp-sub2{text-align:center;color:#333;font-size:10.5pt}h4,.rp-h{font-size:12.5pt;color:${A}}.rp-big{font-size:54pt;font-weight:bold;text-align:center;color:${A}}.rp-term{font-size:24pt;font-weight:bold;text-align:center}.rp-yr,.rp-info{font-size:15pt;text-align:center}
 .rp-cover{border:4px double ${A};padding:20px;text-align:center}.rp-t{border:1px solid #999;padding:2px 8px;margin:2px 0}.dnote{font-size:9pt}.dl{font-size:8pt}.rp-orn,.rp-bar,.cc{display:none}`;
- const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>تحليل النتائج</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]--><style>${css}</style></head><body dir="rtl"><div class="Section1" dir="rtl">${cl.innerHTML}</div></body></html>`;
+ const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>تحليل النتائج</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]--><style>${css}</style></head><body dir="rtl"><div class="Section1" dir="rtl">${cl.innerHTML}</div>
+<!-- مسار 6.6: إخفاء فضاء العمل المهني من حساب المستشار دون حذف البيانات المخزنة -->
+<style>
+[data-mftab="work"], .mf-newhome .mf-tile[data-tab="work"] {display:none!important}
+#p-work {display:none!important}
+</style>
+<script>
+(function(){
+ 'use strict';
+ function removeWorkspaceLinks(){
+  document.querySelectorAll('[data-mftab="work"], [data-tab="work"], [onclick*="showTab(\'work\')"], [onclick*="showTab(&quot;work&quot;)"]').forEach(node=>node.remove());
+  document.querySelectorAll('.home .hc, .mf-newhome button, .mf-newhome .mf-tile').forEach(node=>{
+   if(node.textContent.includes('فضاء العمل المهني'))node.remove();
+  });
+  const work=document.getElementById('p-work');if(work)work.classList.add('hide');
+  if(typeof tab!=='undefined'&&tab==='work'&&typeof showTab==='function')showTab('home');
+ }
+ removeWorkspaceLinks();
+})();
+</script>
+</body></html>`;
  const b64=t=>t.replace(/(.{76})/g,'$1\r\n'),u8=btoa(unescape(encodeURIComponent(html))),B='----=_NextPart_zad';
  const mht=`MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${B}"; type="text/html"\r\n\r\n--${B}\r\nContent-Type: text/html; charset="utf-8"\r\nContent-Transfer-Encoding: base64\r\nContent-Location: file:///C:/zad/report.htm\r\n\r\n${b64(u8)}\r\n`+parts.map(([n,d])=>`--${B}\r\nContent-Type: image/png\r\nContent-Transfer-Encoding: base64\r\nContent-Location: file:///C:/zad/${n}\r\n\r\n${b64(d)}\r\n`).join('')+`--${B}--`;
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([mht],{type:'application/msword'}));a.download='تقرير-تحليل-النتائج.doc';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},1500);toast('✅ تم تصدير ملف Word')}
@@ -2060,7 +2100,27 @@ function mf57esc(v){return mfSafe(v==null||v===''?'—':String(v))}
 function mf57print(title,body,landscape=true){
  const hdr=(localStorage.getItem(mfPrefsKey('header'))||'').replace(/\\n/g,'\n').split('\n').map(x=>x.trim()).filter(Boolean).filter(x=>!x.includes('الجمهورية الجزائرية')&&!x.includes('وزارة التربية الوطنية'));
  const center=current?.center_name||current?.center?.name||'مركز التوجيه المدرسي والمهني';
- const html=`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${mf57esc(title)}</title><style>@page{size:A4 ${landscape?'landscape':'portrait'};margin:11mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#152b3b;margin:0;font-size:10px}header{text-align:center;border-bottom:2px solid #174a65;padding-bottom:8px;margin-bottom:12px;line-height:1.7}header strong{font-size:13px}h1{font-size:16px;text-align:center;margin:10px 0}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #536778;padding:5px 3px;text-align:center;overflow-wrap:anywhere;vertical-align:middle}th{background:#e8f1f7;font-weight:700}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}footer{margin-top:18px;display:flex;justify-content:space-between;font-size:11px}.meta{margin:9px 0;font-size:11px;line-height:1.8}.empty{text-align:center;padding:30px;border:1px solid #ccc}</style></head><body><header><strong>الجمهورية الجزائرية الديمقراطية الشعبية</strong><div>وزارة التربية الوطنية</div>${hdr.map(x=>'<div>'+mf57esc(x)+'</div>').join('')}<div>${mf57esc(center)}</div></header><h1>${mf57esc(title)}</h1>${body}<footer><span>تاريخ الطباعة: ${mf57esc(new Date().toLocaleDateString('ar-DZ'))}</span><span>مستشار التوجيه والإرشاد المدرسي والمهني — الإمضاء</span></footer></body></html>`;
+ const html=`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${mf57esc(title)}</title><style>@page{size:A4 ${landscape?'landscape':'portrait'};margin:11mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#152b3b;margin:0;font-size:10px}header{text-align:center;border-bottom:2px solid #174a65;padding-bottom:8px;margin-bottom:12px;line-height:1.7}header strong{font-size:13px}h1{font-size:16px;text-align:center;margin:10px 0}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #536778;padding:5px 3px;text-align:center;overflow-wrap:anywhere;vertical-align:middle}th{background:#e8f1f7;font-weight:700}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}footer{margin-top:18px;display:flex;justify-content:space-between;font-size:11px}.meta{margin:9px 0;font-size:11px;line-height:1.8}.empty{text-align:center;padding:30px;border:1px solid #ccc}</style></head><body><header><strong>الجمهورية الجزائرية الديمقراطية الشعبية</strong><div>وزارة التربية الوطنية</div>${hdr.map(x=>'<div>'+mf57esc(x)+'</div>').join('')}<div>${mf57esc(center)}</div></header><h1>${mf57esc(title)}</h1>${body}<footer><span>تاريخ الطباعة: ${mf57esc(new Date().toLocaleDateString('ar-DZ'))}</span><span>مستشار التوجيه والإرشاد المدرسي والمهني — الإمضاء</span></footer>
+<!-- مسار 6.6: إخفاء فضاء العمل المهني من حساب المستشار دون حذف البيانات المخزنة -->
+<style>
+[data-mftab="work"], .mf-newhome .mf-tile[data-tab="work"] {display:none!important}
+#p-work {display:none!important}
+</style>
+<script>
+(function(){
+ 'use strict';
+ function removeWorkspaceLinks(){
+  document.querySelectorAll('[data-mftab="work"], [data-tab="work"], [onclick*="showTab(\'work\')"], [onclick*="showTab(&quot;work&quot;)"]').forEach(node=>node.remove());
+  document.querySelectorAll('.home .hc, .mf-newhome button, .mf-newhome .mf-tile').forEach(node=>{
+   if(node.textContent.includes('فضاء العمل المهني'))node.remove();
+  });
+  const work=document.getElementById('p-work');if(work)work.classList.add('hide');
+  if(typeof tab!=='undefined'&&tab==='work'&&typeof showTab==='function')showTab('home');
+ }
+ removeWorkspaceLinks();
+})();
+</script>
+</body></html>`;
  const frame=document.createElement('iframe');frame.style.cssText='position:fixed;width:1px;height:1px;left:-10000px;top:0;border:0';frame.setAttribute('title','معاينة طباعة سجل المتابعة');document.body.appendChild(frame);
  frame.onload=()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(e){mf56status('تعذر فتح الطباعة: '+e.message)}};
  frame.srcdoc=html;
@@ -2207,7 +2267,68 @@ el('mf64-print').onclick=()=>{if(!mf64rows().length){mf61msg('لا توجد اس
 el('mf64-export').onclick=()=>{const rows=mf64rows();if(!rows.length){mf61msg('لا توجد بيانات للتصدير');return}const headers=['السنة','المؤسسة','المستوى','القسم','التلميذ','الرغبات','التوافق','ملاحظات'];const keys=['year','school','stream','class_name','student_name','wishes','compatibility','notes'];const csv=[headers,...rows.map(r=>keys.map(k=>r[k]||''))].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='مسار-تحليل-الاستبيان.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)};
 el('mf64-list').onclick=e=>{const b=e.target.closest('[data-mf64-person]');if(!b)return;const r=mf61rows.find(x=>String(x.id)===b.dataset.mf64Person);if(!r)return;const labels=['التلميذ','المؤسسة','المستوى','القسم',...mf61labels];const keys=['student_name','school','stream','class_name',...mf61keys];mf61print('بطاقة تحليل استبيان الميول — '+r.student_name,[['البيان','المعلومات المسجلة'],...keys.map((k,i)=>[labels[i],r[k]||'—'])]);};
 
+
+/* Masar 6.5: data-quality checks and preparation for validated scoring */
+const mf65css=document.createElement('style');
+mf65css.textContent=`#mf65-quality{border:1px solid #b9d7df;border-radius:14px;padding:15px;margin:15px 0;background:#f0f9ff;color:#173f55}#mf65-quality .mf65-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:12px 0}#mf65-quality .mf65-stat{background:white;border-radius:10px;padding:10px}#mf65-quality .mf65-stat strong{font-size:23px;display:block}#mf65-quality table{width:100%;border-collapse:collapse}#mf65-quality td,#mf65-quality th{border:1px solid #cbd5e1;padding:7px;text-align:right}#mf65-quality .mf65-scroll{overflow:auto;max-height:320px}#mf65-quality button{background:#086e9a;color:white;border:0;border-radius:10px;padding:10px 15px;margin:5px;cursor:pointer}`;
+document.head.appendChild(mf65css);
+const mf65section=document.createElement('section');mf65section.id='mf65-quality';
+mf65section.innerHTML=`<h3>🔎 مسار 6.5 — فحص جاهزية الاستبيانات للتحليل</h3><p>فحص البيانات الناقصة والتكرار قبل اعتماد أي تصحيح آلي. النتائج هنا مؤشرات اكتمال فقط، وليست درجات ميول أو أحكامًا على التلاميذ.</p><div class="mf65-grid" id="mf65-stats"></div><div class="mf65-scroll"><table><thead><tr><th>التلميذ</th><th>المؤسسة / القسم</th><th>الحقول المكتملة</th><th>الملاحظات</th></tr></thead><tbody id="mf65-list"></tbody></table></div><button id="mf65-print" type="button">🖨️ طباعة تقرير جودة البيانات</button><button id="mf65-export" type="button">⬇️ تصدير تقرير المراجعة CSV</button><p style="font-size:13px;color:#775500">لا يتضمن ملف الإدخال الحالي في مسار إجابات البنود الأصلية المرقمة، لذلك لا يمكن استخراج درجات التصحيح الأصلية من النصوص الوصفية وحدها. ستحتاج مرحلة المطابقة إلى إدخال بنود الاستبيان ومفتاح تصحيحها والتحقق منها مقابل Excel.</p>`;
+mf64section.insertAdjacentElement('afterend',mf65section);
+const mf65required=['family','study','career','leisure','media','psych','wishes','compatibility'];
+function mf65audit(){
+ const rows=mf64rows(),seen=new Map();
+ return rows.map(r=>{
+  const key=[r.school,r.class_name,r.student_name].map(x=>String(x||'').trim().toLocaleLowerCase('ar')).join('|');
+  seen.set(key,(seen.get(key)||0)+1);
+  const missing=mf65required.filter(k=>!String(r[k]??'').trim());
+  return {r,key,missing,completed:mf65required.length-missing.length};
+ }).map(a=>({...a,duplicate:seen.get(a.key)>1&&a.r.student_name?.trim()}));
+}
+function mf65render(){
+ if(current?.role!=='counselor')return;
+ const audit=mf65audit(),total=audit.length,complete=audit.filter(a=>!a.missing.length).length,dup=audit.filter(a=>a.duplicate).length;
+ const stats=[['استبيانات معروضة',total],['مكتملة الحقول',complete],['تحتاج استكمالًا',total-complete],['سجلات قد تكون مكررة',dup]];
+ el('mf65-stats').innerHTML=stats.map(([k,v])=>'<div class="mf65-stat">'+mf64esc(k)+'<strong>'+v+'</strong></div>').join('');
+ el('mf65-list').innerHTML=audit.map(a=>'<tr><td>'+mf64esc(a.r.student_name)+'</td><td>'+mf64esc(a.r.school)+' / '+mf64esc(a.r.class_name)+'</td><td>'+a.completed+'/'+mf65required.length+'</td><td>'+mf64esc([a.missing.length?'حقول ناقصة: '+a.missing.map(k=>mf61labels[mf61keys.indexOf(k)]).join('، '):'مكتمل',a.duplicate?'احتمال تكرار':''].filter(Boolean).join(' — '))+'</td></tr>').join('')||'<tr><td colspan="4">لا توجد استبيانات مطابقة للفلاتر</td></tr>';
+}
+const mf65previousRender=mf64render;
+mf64render=function(){mf65previousRender();mf65render()};
+const mf65previousSync=mf64sync;
+mf64sync=function(){mf65previousSync();mf65render()};
+el('mf65-print').onclick=()=>{
+ const audit=mf65audit();if(!audit.length){mf61msg('لا توجد بيانات للطباعة');return}
+ const body='<p>فحص اكتمال البيانات فقط — لا يمثل تصحيحًا نفسيًا أو تقديرًا للميول.</p><table><thead><tr><th>التلميذ</th><th>المؤسسة</th><th>القسم</th><th>الحقول المكتملة</th><th>الحقول الناقصة</th><th>احتمال تكرار</th></tr></thead><tbody>'+audit.map(a=>'<tr><td>'+mf64esc(a.r.student_name)+'</td><td>'+mf64esc(a.r.school)+'</td><td>'+mf64esc(a.r.class_name)+'</td><td>'+a.completed+'/'+mf65required.length+'</td><td>'+mf64esc(a.missing.map(k=>mf61labels[mf61keys.indexOf(k)]).join('، ')||'لا يوجد')+'</td><td>'+(a.duplicate?'نعم':'لا')+'</td></tr>').join('')+'</tbody></table>';
+ mfPrintDocument('تقرير مراجعة استبيان الميول والاهتمامات',body);
+};
+el('mf65-export').onclick=()=>{
+ const audit=mf65audit();if(!audit.length){mf61msg('لا توجد بيانات للتصدير');return}
+ const records=[['التلميذ','المؤسسة','القسم','الحقول المكتملة','الحقول الناقصة','احتمال تكرار'],...audit.map(a=>[a.r.student_name,a.r.school,a.r.class_name,a.completed+'/'+mf65required.length,a.missing.map(k=>mf61labels[mf61keys.indexOf(k)]).join('، '),a.duplicate?'نعم':'لا'])];
+ const csv=records.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='مسار-مراجعة-الاستبيانات.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+};
+
 start();
+})();
+</script>
+
+<!-- مسار 6.6: إخفاء فضاء العمل المهني من حساب المستشار دون حذف البيانات المخزنة -->
+<style>
+[data-mftab="work"], .mf-newhome .mf-tile[data-tab="work"] {display:none!important}
+#p-work {display:none!important}
+</style>
+<script>
+(function(){
+ 'use strict';
+ function removeWorkspaceLinks(){
+  document.querySelectorAll('[data-mftab="work"], [data-tab="work"], [onclick*="showTab(\'work\')"], [onclick*="showTab(&quot;work&quot;)"]').forEach(node=>node.remove());
+  document.querySelectorAll('.home .hc, .mf-newhome button, .mf-newhome .mf-tile').forEach(node=>{
+   if(node.textContent.includes('فضاء العمل المهني'))node.remove();
+  });
+  const work=document.getElementById('p-work');if(work)work.classList.add('hide');
+  if(typeof tab!=='undefined'&&tab==='work'&&typeof showTab==='function')showTab('home');
+ }
+ removeWorkspaceLinks();
 })();
 </script>
 </body>
