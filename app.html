@@ -1271,7 +1271,8 @@ window.mf34Print=function(kind){
  const counselor=esc(settings.counselor||'..............................');
  const school=esc(settings.school||'..............................');
  const schoolYear=esc(settings.year||'2026-2027');
- return mfPrintDocument(names[kind]||'تقرير', '<div><b>اسم ولقب مستشار(ة) التوجيه:</b> '+counselor+'<br><b>المؤسسة:</b> '+school+'<br><b>السنة الدراسية:</b> '+schoolYear+'</div>'+body);
+ if(typeof window.mfPrintDocument!=='function'){alert('تعذر تحميل نظام الطباعة. حدّث الصفحة وأعد المحاولة.');return;}
+ return window.mfPrintDocument(names[kind]||'تقرير', '<div><b>اسم ولقب مستشار(ة) التوجيه:</b> '+counselor+'<br><b>المؤسسة:</b> '+school+'<br><b>السنة الدراسية:</b> '+schoolYear+'</div>'+body);
 };
 window.addEventListener('afterprint',()=>document.body.classList.remove('mf34-print'));
 })();
@@ -1554,6 +1555,9 @@ function mfPrintDocument(title,content){
  try{window.print()}catch(e){clear();alert('تعذرت الطباعة: '+e.message)}
  setTimeout(clear,30000);
 }
+
+// Expose the report printer to the independent annual/monthly/summary UI module.
+window.mfPrintDocument=mfPrintDocument;
 
 function mfInstallInlineSend(){if(current?.role!=='counselor')return;const types={daily:'سجل المتابعة اليومية',annual:'البرنامج السنوي',monthly:'البرنامج الشهري',reports:'تقارير المحاور',exams:'تحليل نتائج الامتحانات',summary:'الحوصلة الشهرية',yearly:'التقرير السنوي',semimonthly:'البرنامج النصف شهري'};let root=el('p-mfextra')||el('app');for(const [kind,label] of Object.entries(types)){let host=document.querySelector('[data-mf-kind="'+kind+'"]');if(!host)host=document.querySelector('[data-mf-section="'+kind+'"]');if(!host)host=root;let id='mf-inline-send-'+kind;if(el(id))continue;let btn=document.createElement('button');btn.type='button';btn.id=id;btn.className='btn pri mf-inline-send';btn.textContent='📤 إرسال '+label+' إلى المركز';btn.dataset.mfSendKind=kind;btn.disabled=current.status!=='approved'||!current.center_id;btn.title=btn.disabled?'يجب اعتمادك في مركز التوجيه أولًا':'';host.append(btn)}
 // The records table is rendered dynamically: add one send action per saved report.
