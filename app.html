@@ -548,7 +548,24 @@ body.mf34-print #mf34-print-sheet .mf-official-body{white-space:normal!important
 body.mf34-print #mf34-print-sheet .mf-official-footer{display:flex;justify-content:space-between;gap:25px;margin-top:22px;font-weight:bold;break-inside:avoid}
 body.mf34-print #mf34-print-sheet h3{break-after:avoid}
 }
-</style></head>
+</style>
+<style id="mf77-native-print-style">
+#mf77-print-sheet{display:none}
+@media print{
+ @page{size:A4;margin:12mm}
+ body.mf77-printing>*:not(#mf77-print-sheet){display:none!important}
+ body.mf77-printing #mf77-print-sheet{display:block!important;position:static!important;visibility:visible!important;background:white!important;color:black!important;direction:rtl!important;font:12px Tahoma,Arial,sans-serif!important;width:100%!important;overflow:visible!important}
+ body.mf77-printing #mf77-print-sheet .mf-republic{text-align:center;font-weight:bold;line-height:1.7;font-size:14px}
+ body.mf77-printing #mf77-print-sheet .mf-official-header{border-bottom:2px solid #222;padding-bottom:10px;margin-bottom:12px}
+ body.mf77-printing #mf77-print-sheet .mf-org{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin-top:8px}
+ body.mf77-printing #mf77-print-sheet h1{text-align:center;font-size:18px;margin:15px 0}
+ body.mf77-printing #mf77-print-sheet table{border-collapse:collapse;width:100%;font-size:11px}
+ body.mf77-printing #mf77-print-sheet th,body.mf77-printing #mf77-print-sheet td{border:1px solid #555;padding:6px;text-align:right;color:black!important;background:white!important;overflow-wrap:anywhere}
+ body.mf77-printing #mf77-print-sheet thead{display:table-header-group}
+ body.mf77-printing #mf77-print-sheet tr{break-inside:avoid}
+}
+</style>
+</head>
 <body>
 <style id="mf-three-roles-style">
 #mf-auth .auth-card{max-width:550px}#mf-role-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:14px 0}#mf-auth .mf-role-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:100px;padding:12px 5px;background:#eff8fc;color:#16536b;border:2px solid #d2e7f0;border-radius:15px;transition:.15s}#mf-auth .mf-role-choice span{font-size:29px}#mf-auth .mf-role-choice b{font-size:13px;line-height:1.4;text-align:center}#mf-auth .mf-role-choice.selected{background:#dff5ff;border-color:#098db6;box-shadow:0 0 0 2px #098db622}#mf-role-hint{text-align:center;font-size:13px;color:#376778;min-height:23px}#mf-account-type{background:#edf5f9;color:#17485b}#mf-auth .auth-card h2{font-size:36px}@media(max-width:420px){#mf-auth .auth-card{padding:16px}#mf-auth .mf-role-choice b{font-size:11px}#mf-auth .mf-role-choice{min-height:90px}}
@@ -1524,15 +1541,18 @@ function mf73PrintHTML(title,body,identity,landscape=false){
  '</style></head><body>'+header+'<h1 class="mf-official-title">'+mfSafe(title)+'</h1><main>'+body+'</main><footer><span>حرر بتاريخ: '+new Date().toLocaleDateString('ar-DZ')+'</span><span>الإمضاء والختم</span></footer></body></html>';
 }
 function mfPrintDocument(title,content){
- // Synchronous visible preview: no iframe, popup, network request or permissions required.
- const old=document.getElementById('mf76-print-preview');if(old)old.remove();
- const p=current||{};
- const identity={center:p.center_name||p.center?.name||(p.role==='center'?p.display_name:'')||'المركز غير محدد',district:p.district||'',directorate:p.wilaya?'مديرية التربية لولاية '+p.wilaya:'مديرية التربية: الولاية غير محددة',counselor:p.role==='counselor'?(p.display_name||''):'',school:'',manager:'',phone:''};
- const overlay=document.createElement('div');overlay.id='mf76-print-preview';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','معاينة الطباعة');
- overlay.innerHTML='<div class="mf76-controls"><button type="button" id="mf76-print-now">🖨️ اطبع الآن / حفظ PDF</button><button type="button" id="mf76-print-close">✕ إغلاق</button></div><article id="mf76-print-content">'+mf69HeaderHTML(identity)+'<h1>'+mfSafe(title)+'</h1>'+content+'<footer>حرر بتاريخ: '+new Date().toLocaleDateString('ar-DZ')+'　 |　 الإمضاء والختم</footer></article>';
- document.body.appendChild(overlay);
- overlay.querySelector('#mf76-print-close').onclick=()=>overlay.remove();
- overlay.querySelector('#mf76-print-now').onclick=()=>{document.body.classList.add('mf76-printing');try{window.print()}catch(e){alert('تعذر فتح الطباعة: '+e.message)}finally{setTimeout(()=>document.body.classList.remove('mf76-printing'),1500)}};
+ // Use the same native window.print() approach as the guidance-interviews register.
+ if(!current){alert('يرجى تسجيل الدخول أولًا');return}
+ const p=current;
+ const identity={center:p.center_name||p.center?.name||(p.role==='center'?p.display_name:'')||'المركز غير محدد',district:p.district||'',directorate:p.wilaya?'مديرية التربية لولاية '+p.wilaya:'مديرية التربية للولاية',counselor:p.role==='counselor'?(p.display_name||''):'',school:'',manager:'',phone:''};
+ let sheet=document.getElementById('mf77-print-sheet');
+ if(!sheet){sheet=document.createElement('section');sheet.id='mf77-print-sheet';document.body.appendChild(sheet)}
+ sheet.innerHTML=mf69HeaderHTML(identity)+'<h1 class="mf-official-title">'+mfSafe(title)+'</h1><main>'+content+'</main><footer style="margin-top:22px;display:flex;justify-content:space-between"><span>حرر بتاريخ: '+new Date().toLocaleDateString('ar-DZ')+'</span><span>الإمضاء والختم</span></footer>';
+ document.body.classList.add('mf77-printing');
+ const clear=()=>document.body.classList.remove('mf77-printing');
+ window.addEventListener('afterprint',clear,{once:true});
+ try{window.print()}catch(e){clear();alert('تعذرت الطباعة: '+e.message)}
+ setTimeout(clear,30000);
 }
 
 function mfInstallInlineSend(){if(current?.role!=='counselor')return;const types={daily:'سجل المتابعة اليومية',annual:'البرنامج السنوي',monthly:'البرنامج الشهري',reports:'تقارير المحاور',exams:'تحليل نتائج الامتحانات',summary:'الحوصلة الشهرية',yearly:'التقرير السنوي',semimonthly:'البرنامج النصف شهري'};let root=el('p-mfextra')||el('app');for(const [kind,label] of Object.entries(types)){let host=document.querySelector('[data-mf-kind="'+kind+'"]');if(!host)host=document.querySelector('[data-mf-section="'+kind+'"]');if(!host)host=root;let id='mf-inline-send-'+kind;if(el(id))continue;let btn=document.createElement('button');btn.type='button';btn.id=id;btn.className='btn pri mf-inline-send';btn.textContent='📤 إرسال '+label+' إلى المركز';btn.dataset.mfSendKind=kind;btn.disabled=current.status!=='approved'||!current.center_id;btn.title=btn.disabled?'يجب اعتمادك في مركز التوجيه أولًا':'';host.append(btn)}
