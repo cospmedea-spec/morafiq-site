@@ -1525,31 +1525,32 @@ function mf73PrintHTML(title,body,identity,landscape=false){
 }
 function mfPrintDocument(title,content){
  if(!current){alert('يرجى تسجيل الدخول قبل الطباعة');return}
- // Open synchronously within the click event: prevents browser popup blockers.
- const popup=window.open('','_blank','width=980,height=800');
+ // Visible print preview; printing only occurs from a direct user click.
+ const old=document.getElementById('mf75-print-overlay');if(old)old.remove();
  const p=current||{};
- const fallback={center:p.center_name||p.center?.name||(p.role==='center'?p.display_name:'')||'المركز غير محدد',district:p.district||'',directorate:p.wilaya?'مديرية التربية لولاية '+p.wilaya:'مديرية التربية للولاية',counselor:p.role==='counselor'?(p.display_name||''):'',school:'',manager:'',phone:''};
- const writeAndPrint=(target,identity)=>{
-  const html=mf73PrintHTML(title,content,identity||fallback);
-  target.document.open();target.document.write(html);target.document.close();
-  target.focus();
-  // Printing is user-initiated; do not depend on network fetch or hidden iframes.
-  const trigger=()=>{try{target.focus();target.print()}catch(err){console.error('Print failed',err);alert('تعذرت الطباعة؛ استخدم Ctrl+P في صفحة التقرير المفتوحة.')}};
-  if(target.document.readyState==='complete')trigger();else target.addEventListener('load',trigger,{once:true});
+ const identity={center:p.center_name||p.center?.name||(p.role==='center'?p.display_name:'')||'المركز غير محدد',
+ district:p.district||'',directorate:p.wilaya?'مديرية التربية لولاية '+p.wilaya:'مديرية التربية للولاية',
+ counselor:p.role==='counselor'?(p.display_name||''):'',school:'',manager:'',phone:''};
+ const overlay=document.createElement('div');overlay.id='mf75-print-overlay';
+ overlay.style.cssText='position:fixed;inset:0;z-index:2147483645;background:#202936eb;display:flex;flex-direction:column;padding:12px;box-sizing:border-box;direction:rtl';
+ const bar=document.createElement('div');bar.style.cssText='display:flex;gap:12px;align-items:center;background:white;padding:10px;border-radius:10px 10px 0 0;flex-wrap:wrap';
+ const printBtn=document.createElement('button');printBtn.type='button';printBtn.textContent='🖨️ اطبع الآن';
+ printBtn.style.cssText='background:#086d9a;color:white;border:0;border-radius:8px;padding:12px 24px;cursor:pointer;font-weight:bold';
+ const closeBtn=document.createElement('button');closeBtn.type='button';closeBtn.textContent='✕ إغلاق المعاينة';
+ closeBtn.style.cssText='background:#eee;color:#222;border:0;border-radius:8px;padding:12px;cursor:pointer';
+ const hint=document.createElement('span');hint.textContent='إذا لم تظهر نافذة الطباعة اضغط داخل المعاينة ثم Ctrl+P';
+ hint.style.cssText='color:#333;font-size:13px';
+ const frame=document.createElement('iframe');frame.title='معاينة '+title;
+ frame.style.cssText='width:100%;flex:1;border:0;background:white;border-radius:0 0 10px 10px';
+ bar.append(printBtn,closeBtn,hint);overlay.append(bar,frame);document.body.appendChild(overlay);
+ closeBtn.onclick=()=>overlay.remove();
+ printBtn.onclick=()=>{
+   try{
+     if(!frame.contentWindow){alert('انتظر تحميل المعاينة ثم أعد المحاولة');return}
+     frame.contentWindow.focus();frame.contentWindow.print();
+   }catch(err){console.error('Masar print error:',err);alert('تعذرت الطباعة: '+err.message+'؛ استخدم Ctrl+P داخل المعاينة')}
  };
- if(popup){
-  // Print immediately using local identity; async lookup must never block print.
-  writeAndPrint(popup,fallback);
- }else{
-  // Popup blocked: render a visible printable document in the current tab.
-  const frame=document.createElement('iframe');frame.title='معاينة طباعة '+title;
-  frame.style.cssText='position:fixed;inset:3%;width:94%;height:94%;z-index:2147483646;background:white;border:3px solid #2563eb;box-shadow:0 0 0 100vmax #0009';
-  const close=document.createElement('button');close.type='button';close.textContent='إغلاق المعاينة ✕';
-  close.style.cssText='position:fixed;top:1%;left:3%;z-index:2147483647;padding:8px;background:#fff;color:#111';
-  close.onclick=()=>{frame.remove();close.remove()};document.body.append(frame,close);
-  frame.srcdoc=mf73PrintHTML(title,content,fallback);
-  frame.addEventListener('load',()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(err){console.error(err)}},{once:true});
- }
+ frame.srcdoc=mf73PrintHTML(title,content,identity);
 }
 
 function mfInstallInlineSend(){if(current?.role!=='counselor')return;const types={daily:'سجل المتابعة اليومية',annual:'البرنامج السنوي',monthly:'البرنامج الشهري',reports:'تقارير المحاور',exams:'تحليل نتائج الامتحانات',summary:'الحوصلة الشهرية',yearly:'التقرير السنوي',semimonthly:'البرنامج النصف شهري'};let root=el('p-mfextra')||el('app');for(const [kind,label] of Object.entries(types)){let host=document.querySelector('[data-mf-kind="'+kind+'"]');if(!host)host=document.querySelector('[data-mf-section="'+kind+'"]');if(!host)host=root;let id='mf-inline-send-'+kind;if(el(id))continue;let btn=document.createElement('button');btn.type='button';btn.id=id;btn.className='btn pri mf-inline-send';btn.textContent='📤 إرسال '+label+' إلى المركز';btn.dataset.mfSendKind=kind;btn.disabled=current.status!=='approved'||!current.center_id;btn.title=btn.disabled?'يجب اعتمادك في مركز التوجيه أولًا':'';host.append(btn)}
@@ -2077,7 +2078,7 @@ if(!document.getElementById('mf71-professional-print-nav')){
  const shortcut=document.createElement('button');shortcut.type='button';shortcut.id='mf71-professional-print-nav';
  shortcut.textContent='🖨️ طباعة بطاقتي المهنية';shortcut.style.cssText='position:fixed;right:18px;top:72px;z-index:99997;background:#087ca4;color:white;border:0;border-radius:12px;padding:10px 14px;cursor:pointer';
  document.body.appendChild(shortcut);
- shortcut.addEventListener('click',()=>{if(current?.role!=='counselor')return;mf53open.click();});
+ shortcut.addEventListener('click',async()=>{if(current?.role!=='counselor')return;mf53modal.classList.add('active');await mf53load();el('mf53-print').click();});
  const original=applyRoleView;
  applyRoleView=function(profile){original(profile);shortcut.hidden=profile?.role!=='counselor'};
  shortcut.hidden=true;
