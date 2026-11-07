@@ -1523,21 +1523,33 @@ function mf73PrintHTML(title,body,identity,landscape=false){
  '@page{size:A4 '+(landscape?'landscape':'portrait')+';margin:12mm}*{box-sizing:border-box}body{font:12px Tahoma,Arial,sans-serif;color:#111;background:white;margin:0;direction:rtl}.mf-republic{text-align:center;font-weight:bold;line-height:1.7;font-size:14px}.mf-official-header{border-bottom:2px solid #222;padding-bottom:9px;margin-bottom:12px}.mf-org{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin-top:10px}.mf-official-title{text-align:center;font-size:18px;margin:15px 0}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #555;padding:6px;text-align:right;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}footer{display:flex;justify-content:space-between;margin-top:24px}button,.noprint{display:none!important}@media print{html,body{background:#fff!important;color:#111!important}}'+
  '</style></head><body>'+header+'<h1 class="mf-official-title">'+mfSafe(title)+'</h1><main>'+body+'</main><footer><span>حرر بتاريخ: '+new Date().toLocaleDateString('ar-DZ')+'</span><span>الإمضاء والختم</span></footer></body></html>';
 }
-async function mfPrintDocument(title,content){
+function mfPrintDocument(title,content){
  if(!current){alert('يرجى تسجيل الدخول قبل الطباعة');return}
- // Start the iframe before awaiting a network request so browser popup restrictions do not block printing.
- const frame=document.createElement('iframe');
- frame.title='طباعة '+title;
- frame.style.cssText='position:fixed;left:-10000px;top:0;width:800px;height:1000px;border:0;opacity:0;pointer-events:none';
- document.body.appendChild(frame);
- let identity;
- try{identity=await Promise.race([mf69PrintIdentity(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))])}
- catch(err){console.warn('Using local print identity',err);const p=current||{};identity={center:p.center_name||p.center?.name||p.display_name||'المركز غير محدد',district:p.district||'',directorate:p.wilaya?'مديرية التربية لولاية '+p.wilaya:'مديرية التربية للولاية',counselor:p.role==='counselor'?(p.display_name||''):'',school:'',manager:'',phone:''}}
- const html=mf73PrintHTML(title,content,identity);
- let printed=false;
- frame.addEventListener('load',()=>{if(printed)return;printed=true;setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(e){console.error('تعذر الطباعة',e);alert('تعذر فتح نافذة الطباعة، تحقق من إعدادات المتصفح')}} ,150)},{once:true});
- const doc=frame.contentDocument;doc.open();doc.write(html);doc.close();
- setTimeout(()=>{if(frame.isConnected)frame.remove()},120000);
+ // Open synchronously within the click event: prevents browser popup blockers.
+ const popup=window.open('','_blank','width=980,height=800');
+ const p=current||{};
+ const fallback={center:p.center_name||p.center?.name||(p.role==='center'?p.display_name:'')||'المركز غير محدد',district:p.district||'',directorate:p.wilaya?'مديرية التربية لولاية '+p.wilaya:'مديرية التربية للولاية',counselor:p.role==='counselor'?(p.display_name||''):'',school:'',manager:'',phone:''};
+ const writeAndPrint=(target,identity)=>{
+  const html=mf73PrintHTML(title,content,identity||fallback);
+  target.document.open();target.document.write(html);target.document.close();
+  target.focus();
+  // Printing is user-initiated; do not depend on network fetch or hidden iframes.
+  const trigger=()=>{try{target.focus();target.print()}catch(err){console.error('Print failed',err);alert('تعذرت الطباعة؛ استخدم Ctrl+P في صفحة التقرير المفتوحة.')}};
+  if(target.document.readyState==='complete')trigger();else target.addEventListener('load',trigger,{once:true});
+ };
+ if(popup){
+  // Print immediately using local identity; async lookup must never block print.
+  writeAndPrint(popup,fallback);
+ }else{
+  // Popup blocked: render a visible printable document in the current tab.
+  const frame=document.createElement('iframe');frame.title='معاينة طباعة '+title;
+  frame.style.cssText='position:fixed;inset:3%;width:94%;height:94%;z-index:2147483646;background:white;border:3px solid #2563eb;box-shadow:0 0 0 100vmax #0009';
+  const close=document.createElement('button');close.type='button';close.textContent='إغلاق المعاينة ✕';
+  close.style.cssText='position:fixed;top:1%;left:3%;z-index:2147483647;padding:8px;background:#fff;color:#111';
+  close.onclick=()=>{frame.remove();close.remove()};document.body.append(frame,close);
+  frame.srcdoc=mf73PrintHTML(title,content,fallback);
+  frame.addEventListener('load',()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(err){console.error(err)}},{once:true});
+ }
 }
 
 function mfInstallInlineSend(){if(current?.role!=='counselor')return;const types={daily:'سجل المتابعة اليومية',annual:'البرنامج السنوي',monthly:'البرنامج الشهري',reports:'تقارير المحاور',exams:'تحليل نتائج الامتحانات',summary:'الحوصلة الشهرية',yearly:'التقرير السنوي',semimonthly:'البرنامج النصف شهري'};let root=el('p-mfextra')||el('app');for(const [kind,label] of Object.entries(types)){let host=document.querySelector('[data-mf-kind="'+kind+'"]');if(!host)host=document.querySelector('[data-mf-section="'+kind+'"]');if(!host)host=root;let id='mf-inline-send-'+kind;if(el(id))continue;let btn=document.createElement('button');btn.type='button';btn.id=id;btn.className='btn pri mf-inline-send';btn.textContent='📤 إرسال '+label+' إلى المركز';btn.dataset.mfSendKind=kind;btn.disabled=current.status!=='approved'||!current.center_id;btn.title=btn.disabled?'يجب اعتمادك في مركز التوجيه أولًا':'';host.append(btn)}
@@ -2019,7 +2031,8 @@ function mf52Print(title,content,opts={}){
  document.body.classList.add('mf34-print');
  try{window.print()}finally{setTimeout(()=>{document.body.classList.remove('mf34-print');sheet.setAttribute('aria-hidden','true')},1200)}
 }
-mfPrintDocument=mf52Print;
+// لا تستبدل وظيفة الطباعة العامة: mf52Print مخصصة لإدارة المركز فقط.
+// mfPrintDocument تظل متاحة للمستشار(ة) ولكافة التقارير.
 // Correct the center statistics print, previously missing the official header.
 el('mf-pro-print').onclick=()=>{
  const active=mfCounselors.filter(p=>p.status==='approved');
@@ -2058,6 +2071,16 @@ if(mf55nav){
    await mf53load();
    el('mf53-print').click();
  });
+}
+// Professional-card print shortcut is always accessible to the counselor.
+if(!document.getElementById('mf71-professional-print-nav')){
+ const shortcut=document.createElement('button');shortcut.type='button';shortcut.id='mf71-professional-print-nav';
+ shortcut.textContent='🖨️ طباعة بطاقتي المهنية';shortcut.style.cssText='position:fixed;right:18px;top:72px;z-index:99997;background:#087ca4;color:white;border:0;border-radius:12px;padding:10px 14px;cursor:pointer';
+ document.body.appendChild(shortcut);
+ shortcut.addEventListener('click',()=>{if(current?.role!=='counselor')return;mf53open.click();});
+ const original=applyRoleView;
+ applyRoleView=function(profile){original(profile);shortcut.hidden=profile?.role!=='counselor'};
+ shortcut.hidden=true;
 }
 const mf53modal=document.createElement('div');mf53modal.id='mf53-modal';document.body.appendChild(mf53modal);
 mf53modal.innerHTML=`<div class="mf53-card" role="dialog" aria-modal="true" aria-labelledby="mf53-title">
