@@ -1285,6 +1285,7 @@ el('mf-wilaya').addEventListener('change',()=>{if(mode==='signup'&&selectedRole=
 function lock(){document.documentElement.classList.remove('mf-role-center','mf-role-admin');document.documentElement.classList.add('mf-auth-locked');auth.hidden=false;auth.style.display='flex';el('mf-center-panel').classList.remove('active');let b=el('mf-logout');if(b)b.hidden=true;view('login')}
 function unlock(){document.documentElement.classList.remove('mf-role-center','mf-role-admin');document.documentElement.classList.remove('mf-auth-locked');auth.hidden=true;auth.style.display='none';el('mf-center-panel').classList.remove('active');if(!el('mf-logout')){let b=document.createElement('button');b.id='mf-logout';b.textContent='تسجيل الخروج';b.type='button';b.style.cssText='position:fixed;bottom:12px;left:12px;z-index:9999;background:#0c7896;color:white;border:0;border-radius:10px;padding:9px 12px;cursor:pointer;font-family:inherit;font-weight:bold';b.addEventListener('click',signOut);document.body.appendChild(b)}el('mf-logout').hidden=false}
 function waiting(t){document.documentElement.classList.remove('mf-role-center','mf-role-admin');document.documentElement.classList.add('mf-auth-locked');auth.hidden=false;auth.style.display='flex';el('mf-center-panel').classList.remove('active');let b=el('mf-logout');if(b)b.hidden=true;view('login');el('mf-pending').hidden=false;el('mf-pending').textContent=t;el('mf-auth-links').innerHTML='<button type="button" id="mf-wait-refresh">تحديث حالة الموافقة</button><button type="button" id="mf-wait-out">تسجيل الخروج</button>';el('mf-wait-refresh').onclick=()=>checkAccess();el('mf-wait-out').onclick=signOut}
+function mf72Deadline(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' — انتهت مهلة الاتصال. تحقق من الإنترنت وأعد المحاولة.')),ms))])}
 function errorText(e){let x=String(e?.message||e||'حدث خطأ غير معروف');if(/invalid login credentials/i.test(x))return 'البريد أو كلمة المرور غير صحيحة';if(/email not confirmed/i.test(x))return 'يرجى تأكيد البريد الإلكتروني أولًا';if(/failed to fetch|network/i.test(x))return 'تعذر الاتصال بالإنترنت أو Supabase';return x}
 async function signOut(){el('mf-link-overlay').classList.remove('open');if(client)await client.auth.signOut();current=null;applyRoleView(null);lock()}
 function applyRoleView(profile){
@@ -1317,17 +1318,18 @@ async function checkAccess(){
  if(refreshing)return;
  refreshing=true;
  try{
-   const {data:{user},error:ue}=await client.auth.getUser();
+   const {data:{user},error:ue}=await mf72Deadline(client.auth.getUser(),15000,'التحقق من الجلسة');
    if(ue||!user){current=null;applyRoleView(null);lock();return}
-   const {data:p,error}=await client.from('mf_profiles').select('id,display_name,role,status,center_id,district').eq('id',user.id).maybeSingle();
+   const {data:p,error}=await mf72Deadline(client.from('mf_profiles').select('id,display_name,role,status,center_id,district').eq('id',user.id).maybeSingle(),15000,'تحميل صلاحيات الحساب');
    if(error){current=null;applyRoleView(null);waiting('تعذر قراءة صلاحيات الحساب: '+error.message);return}
    if(!p){current=null;applyRoleView(null);waiting('لا يوجد سجل صلاحيات لهذا الحساب في mf_profiles.');return}
    current=p;
-   if(p.status!=='approved' && p.role!=='counselor'){
+   if(p.status!=='approved'){
      applyRoleView(null);
      waiting(p.status==='rejected'?'تم رفض طلب الحساب. راجع الجهة المسؤولة.':p.role==='center'?'حساب المركز ينتظر موافقة المدير الرئيسي.':'حساب المستشار(ة) ينتظر موافقة مركز التوجيه التابع له.');return;
    }
-   if(selectedRole && selectedRole!==p.role){applyRoleView(null);waiting('هذا الحساب مسجل بصفة مختلفة عن الخانة المختارة. اختر الصفة الصحيحة ثم أعد الدخول.');return}
+   // Login role comes from the verified profile, not from a potentially stale UI selection.
+   selectedRole=p.role;
    if(p.role==='counselor'){applyRoleView(null);unlock();updateCounselorLinkCard();mf53open.hidden=false;mf58syncVisibility();}
    else if(p.role==='center'||p.role==='admin'){applyRoleView(p);await loadPanel()}
    else {applyRoleView(null);waiting('نوع الحساب غير معروف: '+p.role)}
@@ -1392,12 +1394,24 @@ async function loadPanel(){await loadDirectory();await mfProRefresh();if(!curren
 async function saveDoc(field,id){if(!current||current.role!=='center')return;let payload={center_id:current.id,[field]:el(id).value};let {error}=await client.from('mf_center_documents').upsert(payload,{onConflict:'center_id'});panelMsg(error?'تعذر الحفظ: '+error.message:'تم الحفظ في Supabase')}
 el('mf-save-notes').onclick=()=>saveDoc('notes','mf-center-notes');el('mf-save-summary').onclick=()=>saveDoc('summary','mf-center-summary');el('mf-save-results').onclick=()=>saveDoc('results','mf-center-results');el('mf-panel-refresh').onclick=loadPanel;el('mf-panel-logout').onclick=signOut;el('mf-account-type').onchange=updateType;
 el('mf-auth-links').addEventListener('click',e=>{let b=e.target.closest('[data-auth-mode]');if(b){if(b.dataset.authMode==='signup'&&!selectedRole){msg('اختر أولًا نوع الحساب من الخانات الثلاث');return}if(b.dataset.authMode==='signup'&&selectedRole==='admin'){msg('حساب مدير الموقع لا يُنشأ من التسجيل العام');return}view(b.dataset.authMode)}});
-el('mf-auth-form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!client)return;if(['login','signup'].includes(mode)&&!selectedRole){msg('اختر أولًا نوع الحساب: مدير الموقع أو مركز التوجيه أو مستشار(ة) التوجيه');return}let email=el('mf-email').value.trim(),pass=el('mf-password').value,btn=el('mf-auth-submit');if(['signup','update'].includes(mode)&&pass!==el('mf-confirm').value){msg('كلمتا المرور غير متطابقتين');return}busy=true;btn.disabled=true;msg('جارٍ التنفيذ...');try{let r;if(mode==='login'){r=await client.auth.signInWithPassword({email,password:pass});if(r.error)throw r.error;await checkAccess()}else if(mode==='signup'){let name=el('mf-account-name').value.trim(),role=selectedRole,centerId=el('mf-center-id').value;if(role==='admin')throw Error('لا يمكن إنشاء حساب مدير الموقع من التسجيل العام');if(!name)throw Error('أدخل الاسم');
+el('mf-auth-form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!client)return;if(['login','signup'].includes(mode)&&!selectedRole){msg('اختر أولًا نوع الحساب: مدير الموقع أو مركز التوجيه أو مستشار(ة) التوجيه');return}let email=el('mf-email').value.trim(),pass=el('mf-password').value,btn=el('mf-auth-submit');if(['signup','update'].includes(mode)&&pass!==el('mf-confirm').value){msg('كلمتا المرور غير متطابقتين');return}busy=true;btn.disabled=true;msg('جارٍ التنفيذ...');try{let r;if(mode==='login'){r=await mf72Deadline(client.auth.signInWithPassword({email,password:pass}),18000,'تسجيل الدخول');if(r.error)throw r.error;await checkAccess()}else if(mode==='signup'){let name=el('mf-account-name').value.trim(),role=selectedRole,centerId=el('mf-center-id').value;if(role==='admin')throw Error('لا يمكن إنشاء حساب مدير الموقع من التسجيل العام');if(!name)throw Error('أدخل الاسم');
 let wilaya=el('mf-wilaya').value,district=el('mf-district').value.trim();
 if(!wilaya)throw Error('اختيار الولاية إجباري');
 if(role==='counselor'&&(!centerId||!district))throw Error('اختر مركز التوجيه التابع لولايتك وأدخل المقاطعة');
 r=await client.auth.signUp({email,password:pass,options:{data:{account_type:role,display_name:name,center_id:role==='counselor'?centerId:null,district:role==='counselor'?district:null,wilaya_code:wilaya}}});if(r.error)throw r.error;if(r.data.session)await checkAccess();else{view('login');msg('تم إنشاء الطلب. تحقق من بريدك لتأكيد الحساب، ثم انتظر الموافقة.',true)}}else if(mode==='reset'){r=await client.auth.resetPasswordForEmail(email);if(r.error)throw r.error;view('verify');el('mf-email').value=email;msg('إذا كان البريد مسجّلًا فستصلك رسالة رمز الاستعادة.',true)}else if(mode==='verify'){let token=el('mf-otp').value.trim().replace(/\s/g,'');if(!/^\d{6,12}$/.test(token))throw Error('أدخل الرمز الرقمي');r=await client.auth.verifyOtp({email,token,type:'recovery'});if(r.error)throw r.error;view('update');el('mf-email').value=email;msg('أدخل كلمة المرور الجديدة',true)}else if(mode==='update'){r=await client.auth.updateUser({password:pass});if(r.error)throw r.error;await client.auth.signOut();view('login');el('mf-email').value=email;msg('تم تغيير كلمة المرور',true)}}catch(e){msg(errorText(e))}finally{busy=false;btn.disabled=false}});
-async function start(){if(!window.supabase?.createClient){msg('تعذر تحميل Supabase');return}client=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){current=null;applyRoleView(null);lock()}else if(event==='SIGNED_IN'&&session&&mode!=='update'&&mode!=='verify')setTimeout(checkAccess,0)});let {data}=await client.auth.getSession();if(data.session)await checkAccess();else lock()}
+async function start(){
+ try{
+  if(!window.supabase?.createClient){lock();msg('تعذر تحميل مكتبة Supabase. تحقق من الاتصال ثم أعد تحميل الصفحة.');return}
+  client=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  client.auth.onAuthStateChange((event,session)=>{
+   if(event==='SIGNED_OUT'){current=null;applyRoleView(null);lock()}
+   else if(event==='SIGNED_IN'&&session&&mode!=='update'&&mode!=='verify')setTimeout(()=>{if(!refreshing)checkAccess()},0)
+  });
+  const {data,error}=await mf72Deadline(client.auth.getSession(),15000,'استعادة الجلسة');
+  if(error)throw error;
+  if(data?.session)await checkAccess();else lock();
+ }catch(e){console.error('Masar login initialization:',e);current=null;applyRoleView(null);lock();msg('تعذر بدء تسجيل الدخول: '+errorText(e))}
+}
 
 /* Center professional dashboard and explicit counselor-to-center submissions */
 const mfKindNames={annual:'البرنامج السنوي',semimonthly:'البرنامج النصف شهري',monthly:'البرنامج الشهري',daily:'سجل المتابعة',reports:'التقارير',exams:'تحليل النتائج',summary:'الحصيلة',yearly:'التقرير السنوي',other:'عمل آخر'};
