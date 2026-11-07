@@ -1501,17 +1501,43 @@ function mf69HeaderHTML(id){
  (id.phone?'<div><b>هاتف المركز:</b> '+esc(id.phone)+'</div>':'')+'</div></div>';
 }
 
+function mf73PrintFrame(html){
+ const frame=document.createElement('iframe');
+ frame.setAttribute('title','معاينة الطباعة الرسمية');
+ frame.style.cssText='position:fixed;left:-10000px;top:0;width:800px;height:1000px;border:0;opacity:0;pointer-events:none';
+ document.body.appendChild(frame);
+ let printed=false;
+ const doPrint=()=>{
+  if(printed)return;printed=true;
+  try{frame.contentWindow.focus();frame.contentWindow.print()}
+  catch(err){console.error('Print failed',err);alert('تعذر فتح الطباعة. تحقق من إعدادات المتصفح ثم حاول مجددًا.')}
+ };
+ frame.addEventListener('load',()=>setTimeout(doPrint,150),{once:true});
+ const doc=frame.contentDocument;
+ doc.open();doc.write(html);doc.close();
+ setTimeout(()=>{if(frame.isConnected)frame.remove()},120000);
+}
+function mf73PrintHTML(title,body,identity,landscape=false){
+ const header=mf69HeaderHTML(identity);
+ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+mfSafe(title)+'</title><style>'+ 
+ '@page{size:A4 '+(landscape?'landscape':'portrait')+';margin:12mm}*{box-sizing:border-box}body{font:12px Tahoma,Arial,sans-serif;color:#111;background:white;margin:0;direction:rtl}.mf-republic{text-align:center;font-weight:bold;line-height:1.7;font-size:14px}.mf-official-header{border-bottom:2px solid #222;padding-bottom:9px;margin-bottom:12px}.mf-org{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin-top:10px}.mf-official-title{text-align:center;font-size:18px;margin:15px 0}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #555;padding:6px;text-align:right;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}footer{display:flex;justify-content:space-between;margin-top:24px}button,.noprint{display:none!important}@media print{html,body{background:#fff!important;color:#111!important}}'+
+ '</style></head><body>'+header+'<h1 class="mf-official-title">'+mfSafe(title)+'</h1><main>'+body+'</main><footer><span>حرر بتاريخ: '+new Date().toLocaleDateString('ar-DZ')+'</span><span>الإمضاء والختم</span></footer></body></html>';
+}
 async function mfPrintDocument(title,content){
- if(!current)return;
- const sheet=el('mf34-print-sheet');
- const identity=await mf69PrintIdentity();
- sheet.innerHTML=mf69HeaderHTML(identity).replace('</div></div>','</div><h1 class="mf-official-title">'+mfSafe(title)+'</h1></div>')+
- '<main class="mf-official-body">'+content+'</main><footer class="mf-official-footer"><span>حرر بتاريخ: '+mfSafe(new Date().toLocaleDateString('ar-DZ'))+'</span><span>الإمضاء والختم</span></footer>';
- document.body.classList.add('mf34-print');
- const cleanup=()=>document.body.classList.remove('mf34-print');
- window.addEventListener('afterprint',cleanup,{once:true});
- try{window.print()}catch(e){cleanup();throw e}
- setTimeout(cleanup,90000);
+ if(!current){alert('يرجى تسجيل الدخول قبل الطباعة');return}
+ // Start the iframe before awaiting a network request so browser popup restrictions do not block printing.
+ const frame=document.createElement('iframe');
+ frame.title='طباعة '+title;
+ frame.style.cssText='position:fixed;left:-10000px;top:0;width:800px;height:1000px;border:0;opacity:0;pointer-events:none';
+ document.body.appendChild(frame);
+ let identity;
+ try{identity=await Promise.race([mf69PrintIdentity(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))])}
+ catch(err){console.warn('Using local print identity',err);const p=current||{};identity={center:p.center_name||p.center?.name||p.display_name||'المركز غير محدد',district:p.district||'',directorate:p.wilaya?'مديرية التربية لولاية '+p.wilaya:'مديرية التربية للولاية',counselor:p.role==='counselor'?(p.display_name||''):'',school:'',manager:'',phone:''}}
+ const html=mf73PrintHTML(title,content,identity);
+ let printed=false;
+ frame.addEventListener('load',()=>{if(printed)return;printed=true;setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(e){console.error('تعذر الطباعة',e);alert('تعذر فتح نافذة الطباعة، تحقق من إعدادات المتصفح')}} ,150)},{once:true});
+ const doc=frame.contentDocument;doc.open();doc.write(html);doc.close();
+ setTimeout(()=>{if(frame.isConnected)frame.remove()},120000);
 }
 
 function mfInstallInlineSend(){if(current?.role!=='counselor')return;const types={daily:'سجل المتابعة اليومية',annual:'البرنامج السنوي',monthly:'البرنامج الشهري',reports:'تقارير المحاور',exams:'تحليل نتائج الامتحانات',summary:'الحوصلة الشهرية',yearly:'التقرير السنوي',semimonthly:'البرنامج النصف شهري'};let root=el('p-mfextra')||el('app');for(const [kind,label] of Object.entries(types)){let host=document.querySelector('[data-mf-kind="'+kind+'"]');if(!host)host=document.querySelector('[data-mf-section="'+kind+'"]');if(!host)host=root;let id='mf-inline-send-'+kind;if(el(id))continue;let btn=document.createElement('button');btn.type='button';btn.id=id;btn.className='btn pri mf-inline-send';btn.textContent='📤 إرسال '+label+' إلى المركز';btn.dataset.mfSendKind=kind;btn.disabled=current.status!=='approved'||!current.center_id;btn.title=btn.disabled?'يجب اعتمادك في مركز التوجيه أولًا':'';host.append(btn)}
@@ -2118,12 +2144,11 @@ el('mf56-print').after(mf57buttons);
 el('mf56-print').textContent='🖨️ طباعة السجل حسب المؤسسة والقسم';
 function mf57esc(v){return mfSafe(v==null||v===''?'—':String(v))}
 async function mf57print(title,body,landscape=true){
- const id=await mf69PrintIdentity();
- const header=mf69HeaderHTML(id);
- const html=`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${mfSafe(title)}</title><style>@page{size:A4 ${landscape?'landscape':'portrait'};margin:11mm}body{font-family:Tahoma,Arial;color:#111;margin:0;font-size:11px}.mf-republic{text-align:center;font-weight:bold;line-height:1.8}.mf-org{margin:10px 0;display:grid;grid-template-columns:1fr 1fr;gap:5px}.mf-official-header{border-bottom:2px solid #222;padding-bottom:10px}h1{text-align:center;font-size:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #555;padding:5px;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}footer{margin-top:20px;display:flex;justify-content:space-between}</style></head><body>${header}<h1>${mfSafe(title)}</h1>${body}<footer><span>${new Date().toLocaleDateString('ar-DZ')}</span><span>مستشار(ة) التوجيه — الإمضاء والختم</span></footer></body></html>`;
- const frame=document.createElement('iframe');frame.style.cssText='position:fixed;width:1px;height:1px;left:-10000px;top:0;border:0';frame.title='طباعة التقرير';document.body.appendChild(frame);
- frame.onload=()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(e){console.error(e)}};
- frame.srcdoc=html;setTimeout(()=>frame.remove(),90000);
+ if(!current)return;
+ let identity;
+ try{identity=await Promise.race([mf69PrintIdentity(),new Promise((_,reject)=>setTimeout(()=>reject(Error('timeout')),5000))])}
+ catch(e){identity={center:current.center_name||current.display_name||'المركز غير محدد',district:current.district||'',directorate:'مديرية التربية للولاية',counselor:current.role==='counselor'?(current.display_name||''):'',school:'',manager:'',phone:''}}
+ mf73PrintFrame(mf73PrintHTML(title,body,identity,landscape));
 }
 
 const mf57cols=[['student_no','الرقم'],['student_name','اسم ولقب التلميذ'],['birth_date','تاريخ الميلاد'],['gender','الجنس'],['repeat_status','الإعادة'],['semester1_avg','معدل ف1'],['semester2_avg','معدل ف2'],['two_terms_avg','معدل الفصلين'],['student_wish','الرغبة'],['pre_guidance','التوجيه المسبق'],['counselor_proposal','اقتراح المستشار(ة)'],['teacher_proposal','اقتراح الأساتذة'],['final_guidance','قرار التوجيه'],['admission','القبول'],['appeal','الطعون'],['notes','ملاحظات']];
